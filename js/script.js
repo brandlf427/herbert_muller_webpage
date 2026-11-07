@@ -1,27 +1,33 @@
-// Subtle parallax: the hero image moves more slowly than the page content.
+// Smooth parallax: the image now moves at 0.28 instead of 0.38 (10 percentage points less).
+// RequestAnimationFrame easing interpolates between scroll positions to prevent visible jumps.
 (() => {
-  const image = document.querySelector(".hero__image");
-  if (!image || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const image = document.querySelector('.hero__image');
+  if (!image || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const hero = image.closest('.hero');
+  if (!hero) return;
 
-  let ticking = false;
-  const updateParallax = () => {
-    const hero = image.closest(".hero");
-    if (!hero) return;
-    const rect = hero.getBoundingClientRect();
-    const scrolledThroughHero = Math.max(0, -rect.top);
-    // Positive movement offsets part of the normal upward page movement.
-    image.style.setProperty("--parallax-shift", `${scrolledThroughHero * 0.38}px`);
-    ticking = false;
+  const travelFactor = 0.28;
+  const maxTravel = 260;
+  const easing = 0.12;
+  let current = 0;
+  let target = 0;
+  let frame = null;
+
+  const animate = () => {
+    current += (target - current) * easing;
+    if (Math.abs(target - current) < 0.08) current = target;
+    image.style.transform = `translate3d(0, ${current.toFixed(2)}px, 0) scale(1.13)`;
+    if (current !== target) frame = requestAnimationFrame(animate);
+    else frame = null;
   };
 
-  const requestUpdate = () => {
-    if (!ticking) {
-      window.requestAnimationFrame(updateParallax);
-      ticking = true;
-    }
+  const updateTarget = () => {
+    const scrolled = Math.max(0, -hero.getBoundingClientRect().top);
+    target = Math.min(maxTravel, scrolled * travelFactor);
+    if (frame === null) frame = requestAnimationFrame(animate);
   };
 
-  window.addEventListener("scroll", requestUpdate, { passive: true });
-  window.addEventListener("resize", requestUpdate);
-  updateParallax();
+  window.addEventListener('scroll', updateTarget, { passive: true });
+  window.addEventListener('resize', updateTarget);
+  updateTarget();
 })();
